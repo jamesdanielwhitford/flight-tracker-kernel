@@ -9,8 +9,10 @@
  */
 
 import { Stagehand } from "@browserbasehq/stagehand";
+import Kernel from "@onkernel/sdk";
 import { writeFileSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
+import "dotenv/config";
 
 // Destinations to track
 const DESTINATIONS = ["Athens", "Santorini", "Mykonos", "Heraklion"];
@@ -34,18 +36,35 @@ interface PriceHistory {
 async function searchFlights(): Promise<FlightPrice[]> {
   console.log("🚀 Starting flight price check...\n");
 
+  const useKernel = !!process.env.KERNEL_API_KEY;
+  let kernel: Kernel | null = null;
+  let kernelBrowser: any = null;
+
+  // If using Kernel, create browser first
+  if (useKernel) {
+    console.log("☁️  Connecting to Kernel cloud browser...\n");
+    kernel = new Kernel({ apiKey: process.env.KERNEL_API_KEY });
+    kernelBrowser = await kernel.browsers.create({ stealth: true });
+    console.log(`✓ Kernel browser created: ${kernelBrowser.session_id}`);
+    console.log(`📺 Live view: ${kernelBrowser.browser_live_view_url}\n`);
+  }
+
   const stagehand = new Stagehand({
-    env: process.env.KERNEL_API_KEY ? "BROWSERBASE" : "LOCAL",
+    env: useKernel ? "LOCAL" : "LOCAL",
+    localBrowserLaunchOptions: useKernel
+      ? {
+          cdpUrl: kernelBrowser.cdp_ws_url,
+        }
+      : undefined,
     apiKey: process.env.OPENAI_API_KEY,
     modelName: "gpt-4o",
-    headless: true,
+    headless: !useKernel, // Show browser when local, hide when using Kernel
     verbose: 1,
-    // Kernel connection will be configured via BROWSERBASE env vars
   });
 
   try {
     await stagehand.init();
-    console.log("✓ Browser initialized\n");
+    console.log("✓ Stagehand initialized\n");
 
     const page = stagehand.context.pages()[0];
     await page.goto("https://www.google.com/travel/flights");
@@ -92,7 +111,17 @@ Use the exact format "Destination: CURRENCY AMOUNT" for each line.`;
     return prices;
   } finally {
     await stagehand.close();
-    console.log("\n✓ Browser closed");
+    console.log("\n✓ Stagehand closed");
+
+    // Clean up Kernel browser if used
+    if (kernel && kernelBrowser) {
+      try {
+        await kernel.browsers.delete(kernelBrowser.session_id);
+        console.log("✓ Kernel browser deleted");
+      } catch (error) {
+        console.error("Failed to delete Kernel browser:", error);
+      }
+    }
   }
 }
 

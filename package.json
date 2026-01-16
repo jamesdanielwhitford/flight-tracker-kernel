@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@browserbasehq/stagehand": "^3.0.7",
-    "@kernel-community/sdk": "^0.1.0",
+    "@onkernel/sdk": "^0.1.0",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
