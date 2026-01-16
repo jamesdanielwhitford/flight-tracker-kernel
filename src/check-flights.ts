@@ -49,8 +49,9 @@ async function searchFlights(): Promise<FlightPrice[]> {
     console.log(`📺 Live view: ${kernelBrowser.browser_live_view_url}\n`);
   }
 
+  // Use the EXACT same Stagehand setup that worked locally
   const stagehand = new Stagehand({
-    env: useKernel ? "LOCAL" : "LOCAL",
+    env: "LOCAL",
     localBrowserLaunchOptions: useKernel
       ? {
           cdpUrl: kernelBrowser.cdp_ws_url,
@@ -58,7 +59,7 @@ async function searchFlights(): Promise<FlightPrice[]> {
       : undefined,
     apiKey: process.env.OPENAI_API_KEY,
     modelName: "gpt-4o",
-    headless: !useKernel, // Show browser when local, hide when using Kernel
+    headless: useKernel, // Headless in cloud, visible locally
     verbose: 1,
   });
 
@@ -67,59 +68,59 @@ async function searchFlights(): Promise<FlightPrice[]> {
     console.log("✓ Stagehand initialized\n");
 
     const page = stagehand.context.pages()[0];
+
+    console.log("📍 Navigating to Google Flights...");
     await page.goto("https://www.google.com/travel/flights");
     await page.waitForLoadState("networkidle");
+    console.log("✓ Page loaded\n");
 
-    console.log("🤖 Starting agent search...\n");
+    console.log("🤖 Starting autonomous agent...\n");
+    console.log(`Task: Compare flights from ${ORIGIN} to 4 Greek destinations`);
+    console.log(`Destinations: ${DESTINATIONS.join(", ")}`);
+    console.log(`Dates: ${TRAVEL_DATES}\n`);
 
-    // Use Computer Use Agent (CUA) mode with Gemini for better form interaction
-    const useCUA = !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-
-    if (useCUA) {
-      console.log("Using Gemini Computer Use Agent (visual interaction)\n");
-    } else {
-      console.log("Using GPT-4o (DOM-based interaction)\n");
-    }
-
+    // Use the EXACT same agent setup that worked locally
     const agent = stagehand.agent({
-      cua: useCUA,
-      model: useCUA
-        ? "google/gemini-2.5-computer-use-preview-10-2025"
-        : undefined, // Use default model from Stagehand init
-      systemPrompt: `You are a travel assistant that searches for flights and extracts prices accurately.
+      modelName: "gpt-4o",
+      systemPrompt: `You are a helpful travel assistant that searches for flights and compares prices.
 
-Be thorough, patient, and methodical. Take your time with each search.
-When interacting with forms, wait for autocomplete suggestions to appear.
+You should be thorough, patient, and methodical. Take your time with each search.
+When interacting with forms, make sure to wait for autocomplete suggestions to appear.
 When selecting dates, be careful to choose dates in June 2026.`,
     });
 
-    const instruction = `Find the cheapest flight from ${ORIGIN} to Greek islands in June 2026.
+    // Use the EXACT same instruction that worked locally
+    const result = await agent.execute({
+      instruction: `Find the cheapest flight from Johannesburg to Greek islands in June 2026.
 
 Search these destinations one by one:
-${DESTINATIONS.map((d, i) => `${i + 1}. ${d} (Greece)`).join("\n")}
+1. Athens (Greece)
+2. Santorini (Greece)
+3. Mykonos (Greece)
+4. Crete / Heraklion (Greece)
 
 For each destination:
-- Enter "${ORIGIN}" as origin
+- Clear the search form if needed
+- Enter "Johannesburg" as the origin
 - Enter the destination city name
-- Select travel dates: Departing June 7, 2026, returning June 14, 2026
-- Click search and wait for results
-- Find and record the cheapest flight price shown (extract the full price including currency)
+- Select travel dates: Departing June 7, 2026, returning June 14, 2026 (one week trip)
+- Click search and wait for results to load
+- Find and record the cheapest flight price shown
 
-After searching all destinations, provide the results in this exact format:
-RESULTS:
-Athens: ZAR 10,560
-Santorini: ZAR 14,302
-Mykonos: ZAR 9,299
-Heraklion: ZAR 12,012
+After searching all four destinations, compare the prices and tell me:
+- Which destination has the cheapest flight
+- What the price is
+- A brief summary of all four prices
 
-Use the exact format "Destination: CURRENCY AMOUNT" for each line.`;
-
-    const result = await agent.execute({
-      instruction,
+Take your time and be methodical. Make sure each search completes before moving to the next.`,
       maxSteps: 60,
     });
 
-    console.log("\n✅ Agent completed search\n");
+    console.log("\n" + "=".repeat(60));
+    console.log("AGENT RESULT:");
+    console.log("=".repeat(60));
+    console.log(result);
+    console.log("=".repeat(60));
 
     // Parse the agent's result to extract prices
     const prices = parseAgentResult(result.message);
