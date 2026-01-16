@@ -72,9 +72,25 @@ async function searchFlights(): Promise<FlightPrice[]> {
 
     console.log("🤖 Starting agent search...\n");
 
+    // Use Computer Use Agent (CUA) mode with Gemini for better form interaction
+    const useCUA = !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+    if (useCUA) {
+      console.log("Using Gemini Computer Use Agent (visual interaction)\n");
+    } else {
+      console.log("Using GPT-4o (DOM-based interaction)\n");
+    }
+
     const agent = stagehand.agent({
-      modelName: "gpt-4o",
-      systemPrompt: "You are a travel assistant that searches for flights and extracts prices accurately.",
+      cua: useCUA,
+      model: useCUA
+        ? "google/gemini-2.5-computer-use-preview-10-2025"
+        : "gpt-4o",
+      systemPrompt: `You are a travel assistant that searches for flights and extracts prices accurately.
+
+Be thorough, patient, and methodical. Take your time with each search.
+When interacting with forms, wait for autocomplete suggestions to appear.
+When selecting dates, be careful to choose dates in June 2026.`,
     });
 
     const instruction = `Find the cheapest flight from ${ORIGIN} to Greek islands in June 2026.
