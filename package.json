@@ -1,0 +1,20 @@
+{
+  "name": "flight-tracker-kernel",
+  "version": "1.0.0",
+  "description": "Automated flight price tracking using Stagehand + Kernel + GitHub Actions",
+  "type": "module",
+  "scripts": {
+    "check-flights": "tsx src/check-flights.ts",
+    "test-local": "tsx src/check-flights.ts"
+  },
+  "dependencies": {
+    "@browserbasehq/stagehand": "^3.0.7",
+    "@kernel-community/sdk": "^0.1.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
