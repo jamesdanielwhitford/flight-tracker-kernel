@@ -85,7 +85,7 @@ async function searchFlights(): Promise<FlightPrice[]> {
       cua: useCUA,
       model: useCUA
         ? "google/gemini-2.5-computer-use-preview-10-2025"
-        : "gpt-4o",
+        : undefined, // Use default model from Stagehand init
       systemPrompt: `You are a travel assistant that searches for flights and extracts prices accurately.
 
 Be thorough, patient, and methodical. Take your time with each search.
@@ -132,10 +132,10 @@ Use the exact format "Destination: CURRENCY AMOUNT" for each line.`;
     // Clean up Kernel browser if used
     if (kernel && kernelBrowser) {
       try {
-        await kernel.browsers.delete(kernelBrowser.session_id);
+        await kernel.browsers.deleteByID(kernelBrowser.session_id);
         console.log("✓ Kernel browser deleted");
       } catch (error) {
-        console.error("Failed to delete Kernel browser:", error);
+        console.error("⚠️  Failed to delete Kernel browser:", error);
       }
     }
   }
